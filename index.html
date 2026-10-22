@@ -624,7 +624,7 @@ if('serviceWorker' in navigator){
     <input class="modal-input" id="modal-delete-input" type="password" placeholder="••••••" maxlength="10">
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="modal-confirm" onclick="confirmDelete()">Excluir</button>
+      <button class="modal-confirm" id="modal-delete-btn" onclick="confirmDelete()">Excluir</button>
     </div>
   </div>
 </div>
@@ -2748,6 +2748,7 @@ atualizarLayoutTela((document.querySelector('.screen.active')||{}).id || '');
 function gestaoAtiva(){ try{ return localStorage.getItem('acessoGestao')==='1'; }catch(e){ return false; } }
 function abrirModalDelete(){
   if(gestaoAtiva() && !window._gestaoMode){ confirmDelete(); return; }
+  document.getElementById('modal-delete-btn').textContent='Excluir';
   document.getElementById('modal-delete').classList.add('show');
 }
 function atualizarGestaoUI(){
@@ -2773,6 +2774,7 @@ function acessoGestao(){
   document.getElementById('modal-delete-title').textContent='Acesso gestão';
   document.getElementById('modal-delete-desc').textContent='Digite a senha para ativar o acesso gestão neste aparelho.';
   window._gestaoMode=true;
+  document.getElementById('modal-delete-btn').textContent='Acessar';
   document.getElementById('modal-delete').classList.add('show');
   setTimeout(()=>document.getElementById('modal-delete-input').focus(),100);
 }
