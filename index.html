@@ -603,6 +603,31 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
+<!-- MODAL NOVO PRODUTO (dentro da requisição) -->
+<div class="modal-edit-overlay" id="modal-novo-prod">
+  <div class="modal-edit-box">
+    <h2>Cadastrar produto</h2>
+    <p style="font-size:12px;color:var(--tx2)">Informe o código do Allfood. O nome e a unidade são preenchidos automaticamente e o item já entra na requisição.</p>
+    <label class="modal-field-label">Estoque</label>
+    <select class="modal-input" id="np-est"><option value="">Selecione o estoque</option><option>MASHA ADM</option><option>MASHA PIER</option><option>LINHA</option><option>LINHA TEXAS</option><option>BAR</option><option>CALI CAFÉ</option></select>
+    <label class="modal-field-label">Código Allfood</label>
+    <input class="modal-input" id="np-cod" type="number" inputmode="numeric" placeholder="Ex.: 962" oninput="npBuscar()" autocomplete="off">
+    <div id="np-msg" style="font-size:12px;font-weight:600;margin:-2px 0 6px;min-height:14px"></div>
+    <label class="modal-field-label">Nome do produto</label>
+    <input class="modal-input" id="np-nome" type="text" readonly placeholder="Preenchido pelo código" style="opacity:.8">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label class="modal-field-label">Unidade</label>
+        <select class="modal-input" id="np-un"><option>UN</option><option>KG</option><option>G</option><option>L</option><option>ML</option><option>CX</option><option>FD</option><option>PC</option><option>PT</option><option>BD</option><option>DZ</option><option>BR</option><option>SACO</option><option>LATA</option></select></div>
+      <div><label class="modal-field-label">Saldo inicial</label>
+        <input class="modal-input" id="np-saldo" type="number" min="0" step="0.5" placeholder="0"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:10px">
+      <button class="modal-cancel" onclick="fecharNovoProd()">Cancelar</button>
+      <button class="modal-confirm" style="background:#2C3E35" onclick="npSalvar()">Cadastrar e adicionar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR SALDO -->
 <div class="modal-edit-overlay" id="modal-edit-saldo">
   <div class="modal-edit-box">
@@ -898,13 +923,61 @@ function addPorCodigo(){
 }
 function abrirCadastroProduto(){
   const orig=document.getElementById('f-origem').value;
-  goTo('s-estoque'); window._estVoltar='s-form';
-  const sel=document.getElementById('est-sel-manual');
-  if(orig && [...sel.options].some(o=>o.value===orig)) sel.value=orig;
-  ['est-man-cod','est-man-nome','est-man-saldo'].forEach(i=>{document.getElementById(i).value='';});
-  const c=document.getElementById('est-man-cod'); const box=c.closest('.card');
-  if(box) box.scrollIntoView({block:'start'});
-  setTimeout(()=>c.focus(),50);
+  const sel=document.getElementById('np-est');
+  sel.value=''; if(orig && [...sel.options].some(o=>o.value===orig)) sel.value=orig;
+  ['np-cod','np-nome','np-saldo'].forEach(i=>{document.getElementById(i).value='';});
+  document.getElementById('np-un').selectedIndex=0;
+  document.getElementById('np-msg').textContent='';
+  document.getElementById('modal-novo-prod').classList.add('show');
+  setTimeout(()=>document.getElementById('np-cod').focus(),60);
+}
+function fecharNovoProd(){ document.getElementById('modal-novo-prod').classList.remove('show'); }
+function npBuscar(){
+  const cod=String(document.getElementById('np-cod').value).replace(/\D/g,'');
+  const msg=document.getElementById('np-msg'); const nome=document.getElementById('np-nome');
+  if(!cod){ nome.value=''; msg.textContent=''; return; }
+  const af=window.ALLFOOD_MAP && window.ALLFOOD_MAP[cod];
+  if(!af){ nome.value=''; msg.style.color='#a32d2d'; msg.textContent='Código não encontrado no Allfood'; return; }
+  nome.value=String(af.n).toUpperCase();
+  const un=document.getElementById('np-un'); const u0=String(af.u||'UN').toUpperCase();
+  let fi=[...un.options].findIndex(o=>o.value.toUpperCase()===u0);
+  if(fi<0){ const o=document.createElement('option'); o.textContent=u0; un.appendChild(o); fi=un.options.length-1; }
+  un.selectedIndex=fi;
+  msg.style.color='#0f6e56'; msg.textContent='✓ Encontrado no Allfood';
+  if(window.ALLFOOD_INAT && window.ALLFOOD_INAT.has(Number(cod))) { msg.style.color='#e8560a'; msg.textContent='⚠ Produto inativo'+(gestaoAtiva()?' (será reativado)':''); }
+}
+function npAddRow(c,name,unit){
+  const list=document.getElementById('items-list'); let card=list.lastElementChild;
+  if(!card||(card.querySelector('.item-name-inp')||{}).value){ addItem(); card=list.lastElementChild; }
+  const inp=card.querySelector('.item-name-inp'), us=card.querySelector('.item-unit-sel');
+  inp.value=cap(name); inp.dataset.cod=c; inp.dataset.valid='true';
+  const un=String(unit||'UN').toLowerCase();
+  let idx=[...us.options].findIndex(o=>o.value.toLowerCase()===un);
+  if(idx<0){ const o=document.createElement('option'); o.value=un; o.textContent=un; us.appendChild(o); idx=us.options.length-1; }
+  us.selectedIndex=idx; us.disabled=true; us.style.opacity='0.6'; us.title='Unidade definida pelo Allfood: '+unit;
+  const q=card.querySelector('.item-qty-inp'); if(q) q.focus();
+}
+function npSalvar(){
+  const est=document.getElementById('np-est').value;
+  const cod=String(document.getElementById('np-cod').value).replace(/\D/g,'');
+  const af=window.ALLFOOD_MAP && window.ALLFOOD_MAP[cod];
+  const nome=document.getElementById('np-nome').value.trim();
+  const un=document.getElementById('np-un').value;
+  const saldoIn=parseFloat(document.getElementById('np-saldo').value)||0;
+  if(!est){ toast('Selecione o estoque'); return; }
+  if(!cod||!af){ toast('Informe um código válido do Allfood'); return; }
+  const inativo=window.ALLFOOD_INAT && window.ALLFOOD_INAT.has(Number(cod));
+  if(inativo && !gestaoAtiva()){ alert('Este produto está inativo. Peça à gestão para reativar.'); return; }
+  const key=String(Number(cod));
+  const atual=(estoqueData[est]||{})[key];
+  const saldoAtual=atual?(parseFloat(atual.saldo)||0):0;
+  const ups=[EST_REF.child(est).child(key).set({c:Number(cod),n:nome,u:un,saldo:saldoAtual+saldoIn})];
+  if(inativo) ups.push(db.ref('allfood_cali/inativos/'+cod).remove());
+  Promise.all(ups).then(()=>{
+    npAddRow(Number(cod),nome,un);
+    fecharNovoProd();
+    toast('Cadastrado em '+est+' e adicionado à requisição ✓');
+  }).catch(()=>toast('Erro ao cadastrar ⚠️'));
 }
 function voltarEstoque(){
   const dest=window._estVoltar; window._estVoltar=null;
