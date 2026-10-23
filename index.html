@@ -582,6 +582,21 @@ if('serviceWorker' in navigator){
 </div>
 
 
+<!-- MODAL PRODUTO EM FALTA -->
+<div class="modal-edit-overlay" id="modal-falta">
+  <div class="modal-edit-box">
+    <h2>Produto em falta</h2>
+    <p style="font-size:12px;color:var(--tx2)">Toque nos produtos que estão em falta nesta requisição.</p>
+    <div id="falta-lista" style="max-height:46vh;overflow-y:auto;margin:6px 0 10px"></div>
+    <label class="modal-field-label">Observação (opcional)</label>
+    <input class="modal-input" id="falta-obs" type="text" maxlength="120" placeholder="Ex.: só chega amanhã" autocomplete="off">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="fecharFalta()">Cancelar</button>
+      <button class="modal-confirm" style="background:#e8560a" onclick="confirmarFalta()">Confirmar falta</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR SALDO -->
 <div class="modal-edit-overlay" id="modal-edit-saldo">
   <div class="modal-edit-box">
@@ -1123,6 +1138,44 @@ function renderHome(){
   });
 }
 
+/* ===== PRODUTO EM FALTA: estoquista escolhe quais itens faltam ===== */
+var _faltaSel = {};
+function abrirFalta(){
+  if(!currentDetail) return;
+  if(currentDetail.status==='delivered'){ toast('Requisição já entregue — itens não entregues já aparecem como falta'); return; }
+  _faltaSel = {};
+  (currentDetail.items||[]).forEach(function(it,i){ _faltaSel[i] = it.falta===true; });
+  document.getElementById('falta-obs').value = currentDetail.obsFalta || '';
+  renderFaltaLista();
+  document.getElementById('modal-falta').classList.add('show');
+}
+function renderFaltaLista(){
+  const el = document.getElementById('falta-lista');
+  el.innerHTML = (currentDetail.items||[]).map(function(it,i){
+    const on = !!_faltaSel[i];
+    return '<div onclick="toggleFaltaSel('+i+')" style="display:flex;align-items:center;gap:10px;padding:11px 8px;border-bottom:.5px solid var(--bdr);cursor:pointer;'+(on?'background:#fdf0ea':'')+'">'+
+      '<span style="width:22px;height:22px;border-radius:6px;border:1.5px solid '+(on?'#e8560a':'#bbb')+';background:'+(on?'#e8560a':'transparent')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(on?'✓':'')+'</span>'+
+      '<span style="flex:1;font-size:14px;'+(on?'color:#e8560a;font-weight:600':'')+'">'+it.n+'</span>'+
+      '<span style="font-size:13px;color:var(--tx2)">'+(it.q||it.qOriginal||'—')+' '+(it.u||'')+'</span></div>';
+  }).join('') || '<div class="empty">Sem itens</div>';
+}
+function toggleFaltaSel(i){ _faltaSel[i] = !_faltaSel[i]; renderFaltaLista(); }
+function fecharFalta(){ document.getElementById('modal-falta').classList.remove('show'); }
+function confirmarFalta(){
+  if(!currentDetail) return;
+  const itens = (currentDetail.items||[]);
+  const marcados = itens.filter(function(it,i){ return _faltaSel[i]; }).length;
+  const obs = (document.getElementById('falta-obs').value||'').trim();
+  const novos = itens.map(function(it,i){ const n = Object.assign({}, it); if(_faltaSel[i]) n.falta = true; else delete n.falta; return n; });
+  const upd = { items: novos, obsFalta: (marcados && obs) ? obs : null };
+  if(marcados) upd.faltaEm = Date.now(); else upd.faltaEm = null;
+  REQ_REF.child(currentDetail.fbKey).update(upd);
+  currentDetail.items = novos; currentDetail.obsFalta = upd.obsFalta || ''; 
+  fecharFalta();
+  toast(marcados ? ('⚠️ '+marcados+' produto'+(marcados>1?'s':'')+' marcado'+(marcados>1?'s':'')+' em falta') : 'Falta removida');
+  openDetail(currentDetail.fbKey);
+}
+
 function setHomeFiltro(f){ window._homeFiltro = (window._homeFiltro===f) ? null : f; renderHome(); }
 
 // ---- DETAIL ----
@@ -1139,6 +1192,7 @@ function openDetail(fbKey){
     row('Urgência',um[currentDetail.urgency]||'—')+
     (currentDetail.dataEntrega?row('Necessário até',fmtDate(currentDetail.dataEntrega)):'')+
     row('Status',sm[currentDetail.status]||'—')+
+    (currentDetail.obsFalta?row('Obs. de falta',currentDetail.obsFalta):'')+
     (currentDetail.senhaEntrega?row('Entregue por',currentDetail.senhaEntrega):'')+
     (currentDetail.tsEntrega?row('Horário entrega',fmtTs(currentDetail.tsEntrega)):'')+
     (currentDetail.obs?'<div class="dr"><span class="dk">Obs</span><span class="dv" style="font-weight:400;color:var(--tx2)">'+currentDetail.obs+'</span></div>':'');
