@@ -854,6 +854,25 @@ function initEstoque(){
     estoqueData = snap.val() || {};
   });
 }
+// Lista fixa do Allfood (Cali Cravings): só estes códigos podem ser pedidos
+function initAllfood(){
+  db.ref('allfood_cali/itens').on('value', snap=>{
+    const v = snap.val() || {};
+    window.ALLFOOD_SET = new Set(Object.keys(v).map(Number));
+  });
+}
+function allfoodAtivo(){
+  const el = document.getElementById('f-unidade-display');
+  return !!(el && el.textContent.trim()==='Cali Cravings' && window.ALLFOOD_SET && window.ALLFOOD_SET.size>0);
+}
+function noAllfood(c){ return window.ALLFOOD_SET.has(Number(c)); }
+function validarAllfoodItens(items){
+  if(!allfoodAtivo()) return true;
+  const bad = items.filter(it=>!noAllfood(it.c));
+  if(!bad.length) return true;
+  alert('Estes itens não estão na lista do Allfood da Cali Cravings e não podem ser pedidos:\n\n• '+bad.map(i=>i.n).join('\n• ')+'\n\nEscolha o item pela busca (lista oficial) ou remova-o.');
+  return false;
+}
 
 function verLinhaTexas(){
   goTo('s-consulta');
@@ -991,6 +1010,7 @@ function searchDB(q, origem){
     const estoqueItems = keys.length>0
       ? Object.values(data)
           .filter(item => item && item.n && item.ativo !== false &&
+            (!allfoodAtivo() || noAllfood(item.c)) &&
             (norm(item.n).includes(t) || (isNum && String(item.c||'').includes(q.trim()))))
           .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
       : [];
@@ -998,6 +1018,7 @@ function searchDB(q, origem){
     // Always add limpeza products from global DB that match
     const limpezaItems = DB.filter(i =>
       LIMPEZA_LIVRE.has(i.n.toUpperCase()) &&
+      (!allfoodAtivo() || noAllfood(i.c)) &&
       (norm(i.n).includes(t) || (isNum && String(i.c||'').includes(q.trim())))
     );
 
@@ -1026,6 +1047,7 @@ function initFirebase(){
   firebase.auth().onAuthStateChanged(user=>{
     if(!user) return;
     initEstoque();
+    initAllfood();
     REQ_REF.orderByChild('ts').on('value', snap=>{
       allReqs=[];
       snap.forEach(child=>{
@@ -1816,6 +1838,7 @@ function openWA(req){window.open('https://api.whatsapp.com/send?text='+encodeURI
 function sendWA(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
+  if(!validarAllfoodItens(items)) return;
   const req=mkReq(items,'sent');
   if(editingId){
     REQ_REF.child(editingId).update(req);
@@ -1831,6 +1854,7 @@ function sendWA(){
 function saveDraft(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
+  if(!validarAllfoodItens(items)) return;
   const req=mkReq(items,'pending');
   if(editingId){
     REQ_REF.child(editingId).update(req);
