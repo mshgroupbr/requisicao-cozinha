@@ -345,8 +345,8 @@ if('serviceWorker' in navigator){
   </div>
   <div class="body">
     <div class="stats">
-      <div class="stat"><div class="stat-l">Em aberto</div><div class="stat-n o" id="cnt-p">0</div></div>
-      <div class="stat"><div class="stat-l">Entregues hoje</div><div class="stat-n g" id="cnt-s">0</div></div>
+      <div class="stat stat-fl" id="stat-aberto" onclick="setHomeFiltro('aberto')" style="cursor:pointer"><div class="stat-l">Em aberto</div><div class="stat-n o" id="cnt-p">0</div></div>
+      <div class="stat stat-fl" id="stat-entregue" onclick="setHomeFiltro('entregue')" style="cursor:pointer"><div class="stat-l">Entregues hoje</div><div class="stat-n g" id="cnt-s">0</div></div>
     </div>
     <button class="btn-or" onclick="goTo('s-form')"><i class="ti ti-plus"></i> Nova requisição</button>
     <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
@@ -357,7 +357,7 @@ if('serviceWorker' in navigator){
     <button class="btn-excel-home" id="btn-gestao" onclick="acessoGestao()" style="border-color:#7A1F1F;color:#7A1F1F">🔐 Acesso gestão</button>
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
-      <div class="sec-l">Requisições recentes</div>
+      <div class="sec-l" id="req-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span id="req-title-t">Requisições recentes</span><button id="req-limpar" onclick="setHomeFiltro(null)" style="display:none;border:.5px solid var(--bdr2);background:var(--surf);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--tx2)">Ver todas ✕</button></div>
       <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
   </div>
@@ -1090,7 +1090,15 @@ function renderHome(){
     return;
   }
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
-  list.innerHTML=alertItem+reqsUnidade.map(r=>{
+  let lista=reqsUnidade;
+  if(window._homeFiltro==='aberto') lista=reqsUnidade.filter(r=>r.status==='pending'||r.status==='sent');
+  else if(window._homeFiltro==='entregue') lista=reqsUnidade.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today);
+  const _ft={aberto:'Em aberto — precisam ser tratadas',entregue:'Entregues hoje'};
+  const _tt=document.getElementById('req-title-t'); if(_tt) _tt.textContent=_ft[window._homeFiltro]||'Requisições recentes';
+  const _bl=document.getElementById('req-limpar'); if(_bl) _bl.style.display=window._homeFiltro?'':'none';
+  ['aberto','entregue'].forEach(k=>{ const e=document.getElementById('stat-'+k); if(e){ e.style.boxShadow=window._homeFiltro===k?'inset 0 0 0 2px var(--hd)':''; } });
+  if(!lista.length){ list.innerHTML=alertItem+'<div class="empty"><i class="ti ti-circle-check"></i>'+(window._homeFiltro==='aberto'?'Nenhuma requisição em aberto 🎉':'Nenhuma requisição aqui.')+'</div>'; return; }
+  list.innerHTML=alertItem+lista.map(r=>{
     try{
     const st=stMap[r.status]||stMap.sent;
     const temFalta=(r.items||[]).some(it=>it.falta===true);
@@ -1114,6 +1122,8 @@ function renderHome(){
     el.addEventListener('click',()=>openDetail(el.dataset.key));
   });
 }
+
+function setHomeFiltro(f){ window._homeFiltro = (window._homeFiltro===f) ? null : f; renderHome(); }
 
 // ---- DETAIL ----
 function openDetail(fbKey){
