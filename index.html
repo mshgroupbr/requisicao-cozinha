@@ -512,7 +512,7 @@ if('serviceWorker' in navigator){
       <input type="text" id="f-nome" placeholder="Seu nome">
     </div>
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label class="fl" style="margin:0">Insumos solicitados</label><button type="button" class="btn-cod" onclick="addPorCodigo()" title="Adicionar produto pelo código do Allfood"><i class="ti ti-plus"></i> Código</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label class="fl" style="margin:0">Insumos solicitados</label><button type="button" class="btn-cod" onclick="abrirCadastroProduto()" title="Cadastrar produto (código do Allfood)"><i class="ti ti-plus"></i> Código</button></div>
       <div class="items-list" id="items-list"></div>
       <button class="btn-add" onclick="addItem()"><i class="ti ti-plus"></i> Adicionar insumo</button>
     </div>
@@ -685,7 +685,7 @@ if('serviceWorker' in navigator){
 <!-- TELA GESTÃO DE ESTOQUE -->
 <div class="screen" id="s-estoque">
   <div class="hdr">
-    <button class="hbk" onclick="goTo('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <button class="hbk" onclick="voltarEstoque()"><i class="ti ti-arrow-left"></i></button>
     <div class="htxt"><h1>Gestão de Estoque</h1><p>Saldos por estoque</p></div>
   </div>
   <div class="pad">
@@ -895,6 +895,21 @@ function addPorCodigo(){
   us.selectedIndex=idx; us.disabled=true; us.style.opacity='0.6'; us.title='Unidade definida pelo Allfood: '+it.u;
   toast('#'+c+' · '+cap(it.n)+' ('+it.u+')');
   const q=card.querySelector('.item-qty-inp'); if(q) q.focus();
+}
+function abrirCadastroProduto(){
+  const orig=document.getElementById('f-origem').value;
+  goTo('s-estoque'); window._estVoltar='s-form';
+  const sel=document.getElementById('est-sel-manual');
+  if(orig && [...sel.options].some(o=>o.value===orig)) sel.value=orig;
+  ['est-man-cod','est-man-nome','est-man-saldo'].forEach(i=>{document.getElementById(i).value='';});
+  const c=document.getElementById('est-man-cod'); const box=c.closest('.card');
+  if(box) box.scrollIntoView({block:'start'});
+  setTimeout(()=>c.focus(),50);
+}
+function voltarEstoque(){
+  const dest=window._estVoltar; window._estVoltar=null;
+  if(dest==='s-form'){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-form').classList.add('active'); window.scrollTo(0,0); atualizarLayoutTela('s-form'); }
+  else goTo('s-home');
 }
 function allfoodAtivo(){
   const el = document.getElementById('f-unidade-display');
@@ -1123,6 +1138,7 @@ function goTo(id){
   window.scrollTo(0,0);
   if(id==='s-home') renderHome();
   if(id==='s-form' && !editingId) initForm();
+  if(id!=='s-estoque') window._estVoltar=null;
   if(id==='s-estoque') initRelDates();
   atualizarLayoutTela(id);
 }
@@ -2452,8 +2468,17 @@ function confirmarEditSaldo(){
 function buscarPorCodigo(){
   const cod = parseInt(document.getElementById('est-man-cod').value);
   if(!cod) return;
+  const af = window.ALLFOOD_MAP && window.ALLFOOD_MAP[String(cod)];
+  if(af){
+    document.getElementById('est-man-nome').value=String(af.n).toUpperCase();
+    const unSel0=document.getElementById('est-man-un'); const u0=String(af.u||'UN').toUpperCase();
+    let fi0=[...unSel0.options].findIndex(o=>o.value.toUpperCase()===u0);
+    if(fi0<0){ const o=document.createElement('option'); o.textContent=u0; unSel0.appendChild(o); fi0=unSel0.options.length-1; }
+    unSel0.selectedIndex=fi0;
+    toast('Allfood: '+af.n+' ('+u0+')');
+  }
   const found = DB.find(i=>i.c===cod);
-  if(found){
+  if(found && !af){
     document.getElementById('est-man-nome').value=found.n;
     const unSel=document.getElementById('est-man-un');
     const fi=[...unSel.options].findIndex(o=>o.value.toLowerCase()===found.u.toLowerCase());
