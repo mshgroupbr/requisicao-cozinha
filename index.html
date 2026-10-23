@@ -174,6 +174,9 @@ textarea{resize:none;line-height:1.5}
 .sug-box{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:.5px solid var(--bdr2);border-radius:var(--rs);z-index:9999;max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 8px 32px rgba(0,0,0,.22);display:none}
 .sug-item{padding:11px 14px;font-size:14px;cursor:pointer;border-top:.5px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .sug-item:active,.sug-item.hi{background:var(--or-l)}
+.btn-cod{background:var(--or-l);color:var(--or);border:1.5px solid var(--or);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px}
+.sug-x{color:#a32d2d;font-weight:700;padding:2px 9px;border-radius:8px;flex-shrink:0;font-size:15px}
+.sug-x:hover{background:#fcebeb}
 .sug-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug-tag{font-size:10px;padding:2px 7px;border-radius:10px;flex-shrink:0;white-space:nowrap;font-weight:600}
 .tag-seco{background:#e6f1fb;color:#0c447c}
@@ -509,7 +512,7 @@ if('serviceWorker' in navigator){
       <input type="text" id="f-nome" placeholder="Seu nome">
     </div>
     <div class="card">
-      <label class="fl">Insumos solicitados</label>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label class="fl" style="margin:0">Insumos solicitados</label><button type="button" class="btn-cod" onclick="addPorCodigo()" title="Adicionar produto pelo código do Allfood"><i class="ti ti-plus"></i> Código</button></div>
       <div class="items-list" id="items-list"></div>
       <button class="btn-add" onclick="addItem()"><i class="ti ti-plus"></i> Adicionar insumo</button>
     </div>
@@ -863,6 +866,35 @@ function initAllfood(){
     const v = snap.val() || {};
     window.ALLFOOD_SET = new Set(Object.keys(v).map(Number)); window.ALLFOOD_MAP = v;
   });
+  db.ref('allfood_cali/inativos').on('value', s2=>{ window.ALLFOOD_INAT = new Set(Object.keys(s2.val()||{}).map(Number));
+  });
+}
+function inatAF(c){ return !!(window.ALLFOOD_INAT && c && window.ALLFOOD_INAT.has(Number(c))); }
+function inativarItem(it){
+  if(!it||!gestaoAtiva()) return Promise.resolve(false);
+  if(!confirm('Inativar "'+it.n+'"'+(it.c?' (#'+it.c+')':'')+'?\nEle deixa de aparecer na busca das requisições.')) return Promise.resolve(false);
+  const orig=document.getElementById('f-origem').value; const ups=[];
+  if(it.c) ups.push(db.ref('allfood_cali/inativos/'+it.c).set(true));
+  const data=estoqueData[orig]||{};
+  Object.keys(data).forEach(k=>{ const n=data[k]; if(n&&n.n&&((it.c&&Number(n.c)===Number(it.c))||(!it.c&&n.n===it.n))) ups.push(EST_REF.child(orig).child(k).update({ativo:false})); });
+  return Promise.all(ups).then(()=>{ toast('Produto inativado'); return true; }).catch(()=>{ toast('Erro ao inativar ⚠️'); return false; });
+}
+function addPorCodigo(){
+  const m=window.ALLFOOD_MAP; if(!m){ alert('Lista do Allfood ainda carregando. Tente em instantes.'); return; }
+  const v=prompt('Código do produto no Allfood:'); if(v===null) return;
+  const c=String(v).replace(/\D/g,''); if(!c) return;
+  const it=m[c]; if(!it){ alert('Código '+c+' não encontrado na lista do Allfood.'); return; }
+  if(window.ALLFOOD_INAT&&window.ALLFOOD_INAT.has(Number(c))&&!gestaoAtiva()){ alert('Este produto está inativo.'); return; }
+  const list=document.getElementById('items-list'); let card=list.lastElementChild;
+  if(!card||(card.querySelector('.item-name-inp')||{}).value){ addItem(); card=list.lastElementChild; }
+  const inp=card.querySelector('.item-name-inp'), us=card.querySelector('.item-unit-sel');
+  inp.value=cap(it.n); inp.dataset.cod=c; inp.dataset.valid='true';
+  const un=String(it.u||'UN').toLowerCase();
+  let idx=[...us.options].findIndex(o=>o.value.toLowerCase()===un);
+  if(idx<0){ const o=document.createElement('option'); o.value=un; o.textContent=un; us.appendChild(o); idx=us.options.length-1; }
+  us.selectedIndex=idx; us.disabled=true; us.style.opacity='0.6'; us.title='Unidade definida pelo Allfood: '+it.u;
+  toast('#'+c+' · '+cap(it.n)+' ('+it.u+')');
+  const q=card.querySelector('.item-qty-inp'); if(q) q.focus();
 }
 function allfoodAtivo(){
   const el = document.getElementById('f-unidade-display');
@@ -1013,7 +1045,7 @@ function searchDB(q, origem){
     const estoqueItems = keys.length>0
       ? Object.values(data)
           .filter(item => item && item.n && item.ativo !== false &&
-            (!allfoodAtivo() || noAllfood(item.c)) &&
+            (!allfoodAtivo() || noAllfood(item.c)) && !inatAF(item.c) &&
             (norm(item.n).includes(t) || (isNum && String(item.c||'').includes(q.trim()))))
           .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
       : [];
@@ -1021,7 +1053,7 @@ function searchDB(q, origem){
     // Always add limpeza products from global DB that match
     const limpezaItems = DB.filter(i =>
       LIMPEZA_LIVRE.has(i.n.toUpperCase()) &&
-      (!allfoodAtivo() || noAllfood(i.c)) &&
+      (!allfoodAtivo() || noAllfood(i.c)) && !inatAF(i.c) &&
       (norm(i.n).includes(t) || (isNum && String(i.c||'').includes(q.trim())))
     );
 
@@ -1029,7 +1061,7 @@ function searchDB(q, origem){
     const estoqueNames = new Set(estoqueItems.map(i=>i.n.toUpperCase()));
     const limpezaExtra = limpezaItems.filter(i=>!estoqueNames.has(i.n.toUpperCase()));
 
-    let afExtra=[]; if(allfoodAtivo()&&window.ALLFOOD_MAP){ const have=new Set([...estoqueItems,...limpezaExtra].map(i=>Number(i.c))); afExtra=Object.keys(window.ALLFOOD_MAP).filter(c=>!have.has(Number(c))&&(norm(window.ALLFOOD_MAP[c].n).includes(t)||(isNum&&c.includes(q.trim())))).map(c=>({c:Number(c),n:window.ALLFOOD_MAP[c].n,u:window.ALLFOOD_MAP[c].u||'UN'})); } return [...estoqueItems, ...limpezaExtra, ...afExtra].slice(0,12);
+    let afExtra=[]; if(allfoodAtivo()&&window.ALLFOOD_MAP){ const have=new Set([...estoqueItems,...limpezaExtra].map(i=>Number(i.c))); afExtra=Object.keys(window.ALLFOOD_MAP).filter(c=>!have.has(Number(c))&&!inatAF(c)&&(norm(window.ALLFOOD_MAP[c].n).includes(t)||(isNum&&c.includes(q.trim())))).map(c=>({c:Number(c),n:window.ALLFOOD_MAP[c].n,u:window.ALLFOOD_MAP[c].u||'UN'})); } return [...estoqueItems, ...limpezaExtra, ...afExtra].slice(0,12);
   }
   // No estoque selected - only show limpeza products
   return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&
@@ -2004,12 +2036,14 @@ function addItem(){
           saldoHtml='<span class="sug-saldo '+cls+'">'+s.saldo+' '+s.u+'</span>';
         }
       }
-      return '<div class="sug-item" data-i="'+i+'"><span class="sug-nm">'+cap(item.n)+'</span>'+codBadge+saldoHtml+'</div>';
+      return '<div class="sug-item" data-i="'+i+'"><span class="sug-nm">'+cap(item.n)+'</span>'+codBadge+saldoHtml+(gestaoAtiva()?'<span class="sug-x" title="Inativar produto">✕</span>':'')+'</div>';
     }).join('');
     sugBox.style.display='block';
     sugBox.querySelectorAll('.sug-item').forEach(el=>{
       el.addEventListener('touchstart',e=>{e.preventDefault();pickSug(parseInt(el.dataset.i));},{passive:false});
       el.addEventListener('mousedown',e=>{e.preventDefault();pickSug(parseInt(el.dataset.i));});
+      const xb=el.querySelector('.sug-x');
+      if(xb){ const go=e=>{ e.preventDefault(); e.stopPropagation(); const it=results[parseInt(el.dataset.i)]; inativarItem(it).then(ok=>{ if(ok) renderSug(results.filter(r=>r!==it)); }); }; xb.addEventListener('mousedown',go); xb.addEventListener('touchstart',go,{passive:false}); }
     });
   }
   function pickSug(idx){
