@@ -858,7 +858,7 @@ function initEstoque(){
 function initAllfood(){
   db.ref('allfood_cali/itens').on('value', snap=>{
     const v = snap.val() || {};
-    window.ALLFOOD_SET = new Set(Object.keys(v).map(Number));
+    window.ALLFOOD_SET = new Set(Object.keys(v).map(Number)); window.ALLFOOD_MAP = v;
   });
 }
 function allfoodAtivo(){
@@ -1026,7 +1026,7 @@ function searchDB(q, origem){
     const estoqueNames = new Set(estoqueItems.map(i=>i.n.toUpperCase()));
     const limpezaExtra = limpezaItems.filter(i=>!estoqueNames.has(i.n.toUpperCase()));
 
-    return [...estoqueItems, ...limpezaExtra].slice(0,10);
+    let afExtra=[]; if(allfoodAtivo()&&window.ALLFOOD_MAP){ const have=new Set([...estoqueItems,...limpezaExtra].map(i=>Number(i.c))); afExtra=Object.keys(window.ALLFOOD_MAP).filter(c=>!have.has(Number(c))&&(norm(window.ALLFOOD_MAP[c].n).includes(t)||(isNum&&c.includes(q.trim())))).map(c=>({c:Number(c),n:window.ALLFOOD_MAP[c].n,u:window.ALLFOOD_MAP[c].u||'UN'})); } return [...estoqueItems, ...limpezaExtra, ...afExtra].slice(0,12);
   }
   // No estoque selected - only show limpeza products
   return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&
