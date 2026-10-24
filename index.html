@@ -1594,7 +1594,7 @@ function fecharForcarModal(){
 
 function confirmarForcar(){
   const senha = document.getElementById('forcar-senha').value.trim();
-  if(!gestaoAtiva() && senha !== 'ronaldo'){
+  if(!gestaoAtiva() && String(senha).toLowerCase() !== 'cuba'){
     document.getElementById('forcar-senha').value='';
     document.getElementById('forcar-senha').focus();
     toast('Senha incorreta ❌');
