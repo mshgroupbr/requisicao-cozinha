@@ -1052,8 +1052,8 @@ function confirmarTransferencia(){
   const nome=document.getElementById('tr-nome').value.trim();
   if(!nome){ toast('⚠️ Informe seu nome'); return; }
   const senha=document.getElementById('tr-senha').value.trim();
-  const senhas=['127127','128128','129129','130130'];
-  if(!gestaoAtiva() && !senhas.includes(senha)){ toast('Senha incorreta ❌'); return; }
+  const senhas=['cuba'];
+  if(!gestaoAtiva() && !senhas.includes(String(senha).toLowerCase())){ toast('Senha incorreta ❌'); return; }
   const unEscolhida=document.getElementById('tr-qtd-un').value||'UN';
   const origData=estoqueData[origem]||{};
   let origKey=null;
@@ -1703,14 +1703,14 @@ function confirmarEntregaParcial(){
     return;
   }
 
-  const senhas=['127127','128128','129129','130130','2202'];
+  const senhas=['cuba','2202'];
   const senha = gestaoAtiva() ? '2202' : document.getElementById('entrega-senha-input').value.trim();
   if(!senha){
     document.getElementById('entrega-senha-input').focus();
     toast('Digite a senha de autorização');
     return;
   }
-  if(!senhas.includes(senha)){
+  if(!senhas.includes(String(senha).toLowerCase())){
     document.getElementById('entrega-senha-input').value='';
     document.getElementById('entrega-senha-input').focus();
     toast('Senha incorreta ❌');
