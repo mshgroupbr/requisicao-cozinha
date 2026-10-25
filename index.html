@@ -2319,11 +2319,14 @@ function renderConsulta(){
   const data = estoqueData[sel]||{};
   let items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
   if(busca) items = items.filter(i=>i.n.includes(busca) || String(i.c||'').includes(busca));
+  const nZer = items.filter(i=>!(Number(i.saldo)>0)).length;
+  if(!window._consMostraZero) items = items.filter(i=>Number(i.saldo)>0);
+  const btnZ = nZer ? '<button style="width:100%;margin-bottom:10px;padding:10px;border:1px solid var(--bdr2,#ccc);border-radius:10px;background:var(--surf2,#f4f1ea);font-size:13px;font-weight:600;cursor:pointer" onclick="window._consMostraZero=!window._consMostraZero;renderConsulta()">'+(window._consMostraZero?'🙈 Ocultar zerados/negativos':'👁️ Mostrar zerados/negativos ('+nZer+')')+'</button>' : '';
   if(!items.length){
-    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto encontrado.</div>';
+    list.innerHTML=btnZ+'<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto com saldo encontrado.</div>';
     return;
   }
-  list.innerHTML = items.map(item=>{
+  list.innerHTML = btnZ + items.map(item=>{
     const cls = item.saldo<=0?'zero':item.saldo<=5?'baixo':'';
     const icon = item.saldo<=0?'🔴':item.saldo<=5?'🟠':'🟢';
     return '<div class="saldo-row">'+
