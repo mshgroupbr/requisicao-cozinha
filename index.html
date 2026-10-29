@@ -886,10 +886,22 @@ function initEstoque(){
   });
 }
 // Lista fixa do Allfood (Cali Cravings): só estes códigos podem ser pedidos
+// Nome/unidade configurados no app Inventário (produto_overrides) têm prioridade sobre a lista do Allfood
+function aplicarOverridesAF(){
+  const m = window.ALLFOOD_MAP, o = window.PO_OVR;
+  if(!m || !o) return;
+  Object.keys(o).forEach(c=>{
+    const it = m[c], ov = o[c]; if(!it || !ov) return;
+    if(ov.desc) it.n = ov.desc;
+    if(ov.unit) it.u = ov.unit;
+  });
+}
 function initAllfood(){
+  db.ref('produto_overrides').on('value', s=>{ window.PO_OVR = s.val() || {}; aplicarOverridesAF(); });
   db.ref('allfood_cali/itens').on('value', snap=>{
     const v = snap.val() || {};
     window.ALLFOOD_SET = new Set(Object.keys(v).map(Number)); window.ALLFOOD_MAP = v;
+    aplicarOverridesAF();
   });
   db.ref('allfood_cali/inativos').on('value', s2=>{ window.ALLFOOD_INAT = new Set(Object.keys(s2.val()||{}).map(Number));
   });
