@@ -1513,7 +1513,8 @@ function editReq(){
     if(uSel){uSel.disabled=true;uSel.style.opacity='0.6';}
     last.querySelector('.item-qty-inp').value=it.q;
     const us=last.querySelector('.item-unit-sel');
-    const fi=[...us.options].findIndex(o=>o.value.toLowerCase()===it.u.toLowerCase());
+    let fi=[...us.options].findIndex(o=>o.value.toLowerCase()===String(it.u||'').toLowerCase());
+    if(fi<0 && it.u){ const o=document.createElement('option'); o.value=it.u; o.textContent=it.u; us.appendChild(o); fi=us.options.length-1; }
     if(fi>=0) us.selectedIndex=fi;
   });
 }
@@ -2154,7 +2155,8 @@ function addItem(){
     inp.dataset.valid='true';
     inp.style.borderColor='';
     inp.style.boxShadow='';
-    const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
+    let fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===String(item.u||'').toLowerCase());
+    if(fi<0 && item.u){ const o=document.createElement('option'); o.value=item.u; o.textContent=item.u; unitSel.appendChild(o); fi=unitSel.options.length-1; }
     if(fi>=0) unitSel.selectedIndex=fi;
     // Lock unit to estoque unit
     unitSel.disabled=true;
@@ -2569,7 +2571,8 @@ function buscarPorCodigo(){
   if(found && !af){
     document.getElementById('est-man-nome').value=found.n;
     const unSel=document.getElementById('est-man-un');
-    const fi=[...unSel.options].findIndex(o=>o.value.toLowerCase()===found.u.toLowerCase());
+    let fi=[...unSel.options].findIndex(o=>o.value.toLowerCase()===String(found.u||'').toLowerCase());
+    if(fi<0 && found.u){ const o=document.createElement('option'); o.value=found.u; o.textContent=found.u; unSel.appendChild(o); fi=unSel.options.length-1; }
     if(fi>=0) unSel.selectedIndex=fi;
     document.getElementById('est-man-saldo').focus();
     toast('Produto encontrado: '+found.n);
@@ -2609,7 +2612,8 @@ function selecionarProdutoManual(idx){
   document.getElementById('est-man-nome').value=item.n;
   if(item.c) document.getElementById('est-man-cod').value=item.c;
   const unSel=document.getElementById('est-man-un');
-  const fi=[...unSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
+  let fi=[...unSel.options].findIndex(o=>o.value.toLowerCase()===String(item.u||'').toLowerCase());
+  if(fi<0 && item.u){ const o=document.createElement('option'); o.value=item.u; o.textContent=item.u; unSel.appendChild(o); fi=unSel.options.length-1; }
   if(fi>=0) unSel.selectedIndex=fi;
   sug.style.display='none';
   document.getElementById('est-man-saldo').focus();
