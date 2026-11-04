@@ -973,11 +973,12 @@ function npSalvar(){
   const est=document.getElementById('np-est').value;
   const cod=String(document.getElementById('np-cod').value).replace(/\D/g,'');
   const af=window.ALLFOOD_MAP && window.ALLFOOD_MAP[cod];
-  const nome=document.getElementById('np-nome').value.trim();
-  const un=document.getElementById('np-un').value;
+  const nome0=document.getElementById('np-nome').value.trim();
+  const un0=document.getElementById('np-un').value;
   const saldoIn=parseFloat(document.getElementById('np-saldo').value)||0;
   if(!est){ toast('Selecione o estoque'); return; }
   if(!cod||!af){ toast('Informe um código válido do Allfood'); return; }
+  const nome=af.n||nome0, un=af.u||un0;
   const inativo=window.ALLFOOD_INAT && window.ALLFOOD_INAT.has(Number(cod));
   if(inativo && !gestaoAtiva()){ alert('Este produto está inativo. Peça à gestão para reativar.'); return; }
   const key=String(Number(cod));
@@ -1973,7 +1974,7 @@ function buildMsg(req){
 function openWA(req){window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(buildMsg(req)),'_blank');}
 
 function validarItensEscolhidos(){
-  const ruins=[...document.querySelectorAll('.item-card')].map(c=>c.querySelector('.item-name-inp')).filter(i=>i&&i.value.trim()&&i.dataset.valid!=='true'&&!LIMPEZA_LIVRE.has(i.value.trim().toUpperCase()));
+  const ruins=[...document.querySelectorAll('.item-card')].map(c=>c.querySelector('.item-name-inp')).filter(i=>i&&i.value.trim()&&i.dataset.valid!=='true');
   if(!ruins.length) return true;
   ruins.forEach(i=>{ i.style.borderColor='#e24b4a'; i.style.boxShadow='0 0 0 3px rgba(226,75,74,.12)'; });
   alert('Escolha o item pela lista de sugestões (a unidade vem do cadastro e não pode ser alterada):\n\n• '+ruins.map(i=>i.value.trim()).join('\n• '));
@@ -2225,9 +2226,9 @@ function addItem(){
   inp.addEventListener('blur',()=>{
     setTimeout(()=>{
       sugBox.style.display='none';
-      if(inp.value.trim() && inp.dataset.valid!=='true' && !LIMPEZA_LIVRE.has(inp.value.trim().toUpperCase())){
-        inp.style.borderColor='#e24b4a';
-        inp.style.boxShadow='0 0 0 3px rgba(226,75,74,.12)';
+      if(inp.value.trim() && inp.dataset.valid!=='true'){
+        inp.value=''; inp.dataset.cod=''; inp.style.borderColor=''; inp.style.boxShadow='';
+        toast('Escolha um item da lista de sugestões');
       }
     },200);
   });
