@@ -1972,9 +1972,18 @@ function buildMsg(req){
 
 function openWA(req){window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(buildMsg(req)),'_blank');}
 
+function validarItensEscolhidos(){
+  const ruins=[...document.querySelectorAll('.item-card')].map(c=>c.querySelector('.item-name-inp')).filter(i=>i&&i.value.trim()&&i.dataset.valid!=='true'&&!LIMPEZA_LIVRE.has(i.value.trim().toUpperCase()));
+  if(!ruins.length) return true;
+  ruins.forEach(i=>{ i.style.borderColor='#e24b4a'; i.style.boxShadow='0 0 0 3px rgba(226,75,74,.12)'; });
+  alert('Escolha o item pela lista de sugestões (a unidade vem do cadastro e não pode ser alterada):\n\n• '+ruins.map(i=>i.value.trim()).join('\n• '));
+  return false;
+}
+
 function sendWA(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
+  if(!validarItensEscolhidos()) return;
   if(!validarAllfoodItens(items)) return;
   const req=mkReq(items,'sent');
   if(editingId){
@@ -1991,6 +2000,7 @@ function sendWA(){
 function saveDraft(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
+  if(!validarItensEscolhidos()) return;
   if(!validarAllfoodItens(items)) return;
   const req=mkReq(items,'pending');
   if(editingId){
@@ -2121,6 +2131,7 @@ function addItem(){
     const o=document.createElement('option'); o.value=u; o.textContent=u; unitSel.appendChild(o);
   });
   qtyRow.appendChild(qtyInp); qtyRow.appendChild(unitSel);
+  unitSel.disabled=true; unitSel.style.opacity='0.6'; unitSel.title='A unidade vem do item escolhido na lista';
   card.appendChild(nameRow); card.appendChild(sugBox); card.appendChild(saldoTag); card.appendChild(qtyRow);
   document.getElementById('items-list').appendChild(card);
   let results=[];
@@ -2192,7 +2203,7 @@ function addItem(){
     inp.dataset.valid='false';
     if(saldoTag) saldoTag.style.display='none';
     inp.style.borderColor=''; inp.style.boxShadow='';
-    unitSel.disabled=false; unitSel.style.opacity=''; unitSel.title='';
+    inp.dataset.cod=''; unitSel.disabled=true; unitSel.style.opacity='0.6'; unitSel.title='A unidade vem do item escolhido na lista';
     const orig=document.getElementById('f-origem').value;
     if(!orig){
       sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';
