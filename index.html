@@ -1321,6 +1321,14 @@ function renderFaltaLista(){
 }
 function toggleFaltaSel(i){ _faltaSel[i] = !_faltaSel[i]; renderFaltaLista(); }
 function fecharFalta(){ document.getElementById('modal-falta').classList.remove('show'); }
+function faltaNotifSet(req, it, on){
+  try{
+    const k = String(req.fbKey).replace(/[.#$\/\[\]]/g,'_')+'_'+String(it.c||it.n).replace(/[.#$\/\[\]]/g,'_');
+    const ref = db.ref('faltas_notif/'+k);
+    if(on) ref.set({c:it.c||'', n:it.n||'', u:it.u||'', q:it.qOriginal||it.q||'', unidade:req.unidade||'', setor:req.setor||'', solicitante:req.nome||'', origem:req.origem||'', destino:req.destino||'', reqKey:req.fbKey, ts:Date.now()});
+    else ref.remove();
+  }catch(e){ console.warn('faltaNotif',e); }
+}
 function confirmarFalta(){
   if(!currentDetail) return;
   const itens = (currentDetail.items||[]);
@@ -1330,6 +1338,7 @@ function confirmarFalta(){
   const upd = { items: novos, obsFalta: (marcados && obs) ? obs : null };
   if(marcados) upd.faltaEm = Date.now(); else upd.faltaEm = null;
   REQ_REF.child(currentDetail.fbKey).update(upd);
+  itens.forEach(function(it,i){ const era = it.falta===true, agora = !!_faltaSel[i]; if(agora && !era) faltaNotifSet(currentDetail, it, true); else if(!agora && era) faltaNotifSet(currentDetail, it, false); });
   currentDetail.items = novos; currentDetail.obsFalta = upd.obsFalta || ''; 
   fecharFalta();
   toast(marcados ? ('⚠️ '+marcados+' produto'+(marcados>1?'s':'')+' marcado'+(marcados>1?'s':'')+' em falta') : 'Falta removida');
@@ -1746,6 +1755,7 @@ function confirmarEntregaParcial(){
   });
 
   // Clean undefined values before sending to Firebase
+  items.forEach((it, idx)=>{ const st = state[idx]; if((!st || !st.entregar) && it.falta!==true) faltaNotifSet(currentDetail, it, true); });
   const cleanItems = updatedItems.map(it=>{
     const clean={};
     Object.entries(it).forEach(([k,v])=>{ if(v!==undefined) clean[k]=v; });
