@@ -1162,7 +1162,7 @@ function searchDB(q, origem){
     const estoqueNames = new Set(estoqueItems.map(i=>i.n.toUpperCase()));
     const limpezaExtra = limpezaItems.filter(i=>!estoqueNames.has(i.n.toUpperCase()));
 
-    let afExtra=[]; if(allfoodAtivo()&&window.ALLFOOD_MAP){ const have=new Set([...estoqueItems,...limpezaExtra].map(i=>Number(i.c))); afExtra=Object.keys(window.ALLFOOD_MAP).filter(c=>!have.has(Number(c))&&!inatAF(c)&&(norm(window.ALLFOOD_MAP[c].n).includes(t)||(isNum&&c.includes(q.trim())))).map(c=>({c:Number(c),n:window.ALLFOOD_MAP[c].n,u:window.ALLFOOD_MAP[c].u||'UN'})); } return [...estoqueItems, ...limpezaExtra, ...afExtra].slice(0,12);
+    let afExtra=[]; if((allfoodAtivo()||origem==='MASHA ADM'||origem==='MASHA PIER')&&window.ALLFOOD_MAP){ const have=new Set([...estoqueItems,...limpezaExtra].map(i=>Number(i.c))); afExtra=Object.keys(window.ALLFOOD_MAP).filter(c=>!have.has(Number(c))&&!inatAF(c)&&(norm(window.ALLFOOD_MAP[c].n).includes(t)||(isNum&&c.includes(q.trim())))).map(c=>({c:Number(c),n:window.ALLFOOD_MAP[c].n,u:window.ALLFOOD_MAP[c].u||'UN'})); } return [...estoqueItems, ...limpezaExtra, ...afExtra].slice(0,12);
   }
   // No estoque selected - only show limpeza products
   return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&
